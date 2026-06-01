@@ -377,15 +377,10 @@ class KimiCodeBackend(AgentBackend):
     resume_strategy = "kimi_resume"
     resume_flag = "-S"
     post_spawn_strategy = "seed_message"
-    mcp_config_scope = McpConfigScope(
-        owner="backend",
-        effective_scope="backend_global",
-        label="Kimi Code global backend config",
-        description=(
-            "Kimi Code MCP edits target the user-level Kimi Code config shared by "
-            "Kimi Code sessions on this host."
-        ),
-    )
+    # MCP server config scope is None until peer_mcp.py implements Kimi support.
+    # The repowire MCP tools (ask, ack, notify, spawn_peer, etc.) work fine;
+    # this only affects server list/add/remove operations.
+    mcp_config_scope = None
 
     @classmethod
     def mcp_runtime_matches(cls, env: Mapping[str, str]) -> bool:
@@ -429,21 +424,6 @@ class KimiCodeBackend(AgentBackend):
                 BackendInstallMessage("error", f"Failed to configure Kimi Code MCP: {e}")
             )
         return messages
-
-    def list_mcp_servers(self, peer):
-        from repowire import peer_mcp
-
-        return peer_mcp._kimi_list()  # type: ignore[attr-defined]
-
-    def add_mcp_server(self, peer, spec) -> None:
-        from repowire import peer_mcp
-
-        peer_mcp._kimi_add(spec)  # type: ignore[attr-defined]
-
-    def remove_mcp_server(self, peer, name: str) -> None:
-        from repowire import peer_mcp
-
-        peer_mcp._kimi_remove(name)  # type: ignore[attr-defined]
 
 
 class OpenCodeBackend(AgentBackend):
