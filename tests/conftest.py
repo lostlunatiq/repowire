@@ -20,6 +20,7 @@ from repowire.daemon.message_router import MessageRouter
 from repowire.daemon.peer_registry import PeerRegistry
 from repowire.daemon.query_tracker import QueryTracker
 from repowire.daemon.state.database import StateDatabase
+from repowire.daemon.state.token_budgets import SQLiteTokenBudgetStore
 from repowire.daemon.websocket_transport import WebSocketTransport
 
 
@@ -68,6 +69,7 @@ def make_daemon_app(
 
     state_db = StateDatabase(tmp_path / "state.db")
     delivery_trace_store = DeliveryTraceStore(state_db)
+    token_budget_store = SQLiteTokenBudgetStore(state_db)
 
     state_kwargs: dict[str, Any] = {
         "config": cfg,
@@ -79,6 +81,7 @@ def make_daemon_app(
         "peer_registry": registry,
         "relay_mode": cfg.relay.enabled,
         "delivery_trace_store": delivery_trace_store,
+        "token_budget_store": token_budget_store,
     }
     if state_overrides:
         state_kwargs.update(state_overrides)
@@ -86,6 +89,8 @@ def make_daemon_app(
     init_deps(cfg, registry, state)
 
     app = FastAPI()
+    for key, value in state_kwargs.items():
+        setattr(app.state, key, value)
     for router in routers:
         app.include_router(router)
 
