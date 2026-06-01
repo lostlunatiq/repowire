@@ -307,6 +307,38 @@ def _gemini_resumable(peer_path: str | None, runtime_session_id: str) -> bool:
     return False
 
 
+def _kimi_resumable(peer_path: str | None, runtime_session_id: str) -> bool:
+    """Validate that a Kimi session_id exists in the session index.
+
+    Kimi stores sessions in ~/.kimi-code/session_index.jsonl (JSONL format),
+    where each line maps sessionId -> sessionDir -> workDir. We check that
+    the sessionId exists and its sessionDir is present on disk.
+    """
+    index_path = Path.home() / ".kimi-code" / "session_index.jsonl"
+    if not index_path.is_file():
+        return False
+
+    try:
+        with open(index_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if entry.get("sessionId") != runtime_session_id:
+                    continue
+                session_dir = Path(entry.get("sessionDir", ""))
+                if session_dir.is_dir():
+                    return True
+    except OSError:
+        return False
+
+    return False
+
+
 def _safe_is_file(path: Path) -> bool:
     try:
         return path.expanduser().is_file()
@@ -317,7 +349,7 @@ def _safe_is_file(path: Path) -> bool:
 # Per-backend on-disk resume validators. Backends absent from this table declare
 # a resume invocation but have no mapped session store, so their status is
 # "unvalidated_backend" (the seam falls back to fresh+warning rather than risk a
-# resume that exits hard after the pane is already killed). All six current
+# resume that exits hard after the pane is already killed). All seven current
 # resume-capable backends are mapped below.
 _RESUME_VALIDATORS = {
     "claude-code": _claude_resumable,
@@ -326,6 +358,7 @@ _RESUME_VALIDATORS = {
     "pi": _pi_resumable,
     "antigravity": _antigravity_resumable,
     "gemini": _gemini_resumable,
+    "kimi-code": _kimi_resumable,
 }
 
 PREVALIDATABLE_RESUME_BACKENDS = frozenset(_RESUME_VALIDATORS)
