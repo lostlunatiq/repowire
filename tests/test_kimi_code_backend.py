@@ -1,10 +1,7 @@
-import os
-from unittest.mock import patch
 
 from repowire.agent_backends import (
     AGENT_BACKENDS,
     KimiCodeBackend,
-    build_resume_command,
     detect_mcp_backend,
 )
 from repowire.config.models import AgentType

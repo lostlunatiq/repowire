@@ -398,35 +398,52 @@ class KimiCodeBackend(AgentBackend):
         return bool(env.get("KIMI_CODE_SESSION_ID"))
 
     def install(self, options: BackendInstallOptions | None = None) -> list[BackendInstallMessage]:
-        from repowire.installers.kimi_code import install_hooks, install_mcp
+        try:
+            from repowire.installers.kimi_code import install_hooks, install_mcp
+        except ModuleNotFoundError:
+            return [
+                BackendInstallMessage(
+                    "info",
+                    "Kimi Code installer not yet implemented; "
+                    "backend will work without explicit install.",
+                )
+            ]
 
         messages: list[BackendInstallMessage] = []
         try:
             install_hooks()
-            messages.append(BackendInstallMessage("success", "Kimi Code hooks installed"))
+            messages.append(
+                BackendInstallMessage("success", "Kimi Code hooks installed")
+            )
         except Exception as e:
-            messages.append(BackendInstallMessage("error", f"Failed to install Kimi Code hooks: {e}"))
+            messages.append(
+                BackendInstallMessage("error", f"Failed to install Kimi Code hooks: {e}")
+            )
         try:
             install_mcp()
-            messages.append(BackendInstallMessage("success", "Kimi Code MCP server configured"))
+            messages.append(
+                BackendInstallMessage("success", "Kimi Code MCP server configured")
+            )
         except Exception as e:
-            messages.append(BackendInstallMessage("error", f"Failed to configure Kimi Code MCP: {e}"))
+            messages.append(
+                BackendInstallMessage("error", f"Failed to configure Kimi Code MCP: {e}")
+            )
         return messages
 
     def list_mcp_servers(self, peer):
         from repowire import peer_mcp
 
-        return peer_mcp._kimi_list()
+        return peer_mcp._kimi_list()  # type: ignore[attr-defined]
 
     def add_mcp_server(self, peer, spec) -> None:
         from repowire import peer_mcp
 
-        peer_mcp._kimi_add(spec)
+        peer_mcp._kimi_add(spec)  # type: ignore[attr-defined]
 
     def remove_mcp_server(self, peer, name: str) -> None:
         from repowire import peer_mcp
 
-        peer_mcp._kimi_remove(name)
+        peer_mcp._kimi_remove(name)  # type: ignore[attr-defined]
 
 
 class OpenCodeBackend(AgentBackend):
