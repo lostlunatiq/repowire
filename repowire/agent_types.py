@@ -15,3 +15,4 @@ class AgentType(str, Enum):
     ANTIGRAVITY = "antigravity"
     PI = "pi"
     MCP_HTTP = "mcp-http"
+    KIMI_CODE = "kimi-code"
