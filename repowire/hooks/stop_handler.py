@@ -32,6 +32,46 @@ from repowire.session.transcript import (
 )
 
 
+def _estimate_and_report_usage(
+    backend: str,
+    user_text: str | None,
+    assistant_text: str | None,
+) -> None:
+    """Estimate token usage from turn text and POST it to the daemon.
+
+    Uses backend-specific character-to-token multipliers.
+    This is best-effort; true per-turn counts are preferred when available.
+    """
+    multipliers = {
+        "claude-code": 4.0,
+        "kimi-code": 3.5,
+        "gemini": 4.0,
+        "codex": 4.0,
+        "opencode": 4.0,
+        "antigravity": 4.0,
+        "pi": 4.0,
+    }
+    mult = multipliers.get(backend, 4.0)
+    safety = 1.1 if backend == "kimi-code" else 1.0
+
+    input_tokens = int((len(user_text or "") / mult) * safety) if user_text else 0
+    output_tokens = int((len(assistant_text or "") / mult) * safety) if assistant_text else 0
+
+    if input_tokens == 0 and output_tokens == 0:
+        return
+
+    from repowire.hooks.utils import daemon_post, get_display_name
+
+    peer_name = get_display_name()
+    try:
+        daemon_post(
+            f"/peers/{peer_name}/usage",
+            {"input_tokens": input_tokens, "output_tokens": output_tokens},
+        )
+    except Exception as exc:
+        print(f"repowire stop: usage report failed: {exc}", file=sys.stderr)
+
+
 def _stop_chat_delta_streamer(pane_id: str | None) -> None:
     """Signal the per-turn streamer (if any) to exit by removing its pidfile.
 
@@ -118,6 +158,9 @@ def main(backend: str = "claude-code") -> int:
         user_text = None
     if assistant_text and not assistant_text.strip():
         assistant_text = None
+
+    # Report estimated usage for this turn
+    _estimate_and_report_usage(backend, user_text, assistant_text)
 
     write_handoff_summary(
         cwd=payload.cwd or input_data.get("cwd"),

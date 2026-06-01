@@ -13,6 +13,39 @@ from repowire.hooks.adapters import hook_output, normalize
 from repowire.hooks.utils import get_display_name, update_status
 
 
+def _budget_check_blocking(backend: str) -> str | None:
+    """Best-effort budget check. Returns block reason if budget exhausted.
+
+    Backends that support hook-level block decisions (gemini, kimi)
+    get a native block. Others log a warning and rely on daemon-level
+    enforcement (ask routing, job runner).
+    """
+    from repowire.hooks.utils import daemon_get, get_display_name
+
+    peer_name = get_display_name()
+    try:
+        resp = daemon_get(f"/peers/{peer_name}/budget")
+        if resp and resp.get("remaining", 100000) <= 0:
+            used = resp.get("used", 0)
+            ceiling = resp.get("ceiling", 100000)
+            reason = (
+                f"Token budget exhausted: {used}/{ceiling}. "
+                f"Kill this peer or spawn a fresh one to reset."
+            )
+            if backend in ("gemini", "kimi", "antigravity"):
+                print(json.dumps({"decision": "deny", "reason": reason}))
+                return reason
+            print(
+                f"repowire prompt: budget exhausted ({used}/{ceiling}) — "
+                f"daemon will block further asks",
+                file=sys.stderr,
+            )
+            return reason
+    except Exception as exc:
+        print(f"repowire prompt: budget check failed: {exc}", file=sys.stderr)
+    return None
+
+
 def _maybe_spawn_chat_delta_streamer(
     transcript_path: str | None, pane_id: str | None, session_id: str | None = None,
 ) -> None:
@@ -83,6 +116,11 @@ def main(backend: str = "claude-code") -> int:
         return 0
 
     payload = normalize(input_data, backend)
+
+    # Budget gate
+    block_reason = _budget_check_blocking(backend)
+    if block_reason and backend in ("gemini", "kimi", "antigravity"):
+        return 0
 
     if payload.event != "UserPromptSubmit":
         return 0
