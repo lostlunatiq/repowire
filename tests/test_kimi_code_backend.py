@@ -33,6 +33,12 @@ def test_kimi_mcp_runtime_matches_explicit() -> None:
     assert KimiCodeBackend.mcp_runtime_matches(env) is True
 
 
+def test_kimi_mcp_runtime_matches_session_id() -> None:
+    """Forward-looking KIMI_CODE_SESSION_ID marker."""
+    env = {"KIMI_CODE_SESSION_ID": "session_abc123"}
+    assert KimiCodeBackend.mcp_runtime_matches(env) is True
+
+
 def test_kimi_mcp_runtime_matches_no_marker() -> None:
     """Without explicit env or Kimi-specific marker, should not match."""
     env = {"PATH": "/usr/bin", "HOME": "/tmp"}

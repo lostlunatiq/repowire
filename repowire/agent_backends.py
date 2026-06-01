@@ -391,7 +391,11 @@ class KimiCodeBackend(AgentBackend):
     def mcp_runtime_matches(cls, env: Mapping[str, str]) -> bool:
         if super().mcp_runtime_matches(env):
             return True
-        return False
+        # Kimi Code does not currently set a distinctive env var at startup.
+        # The primary detection path is explicit REPOWIRE_BACKEND or the
+        # config marker (~/.kimi-code) checked by detect_installed().
+        # KIMI_CODE_SESSION_ID is a forward-looking marker for future releases.
+        return bool(env.get("KIMI_CODE_SESSION_ID"))
 
     def install(self, options: BackendInstallOptions | None = None) -> list[BackendInstallMessage]:
         from repowire.installers.kimi_code import install_hooks, install_mcp
