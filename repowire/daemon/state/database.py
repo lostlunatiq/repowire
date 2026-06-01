@@ -8,7 +8,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 
 class StateDatabase:
@@ -415,6 +415,26 @@ class StateDatabase:
             )
             self.conn.execute(
                 """
+                CREATE TABLE IF NOT EXISTS token_budgets (
+                    budget_id TEXT PRIMARY KEY,
+                    parent_peer_id TEXT,
+                    agent_type TEXT NOT NULL,
+                    cumulative_input_tokens INTEGER NOT NULL DEFAULT 0,
+                    cumulative_output_tokens INTEGER NOT NULL DEFAULT 0,
+                    budget_ceiling INTEGER NOT NULL DEFAULT 100000,
+                    warning_sent INTEGER NOT NULL DEFAULT 0,
+                    last_updated TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+                )
+                """,
+            )
+            self.conn.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_token_budgets_parent
+                ON token_budgets(parent_peer_id)
+                """,
+            )
+            self.conn.execute(
+                """
                 INSERT OR IGNORE INTO schema_migrations(version, description)
                 VALUES (?, ?)
                 """,
@@ -482,6 +502,13 @@ class StateDatabase:
                 VALUES (?, ?)
                 """,
                 (10, "delivery trace ledger"),
+            )
+            self.conn.execute(
+                """
+                INSERT OR IGNORE INTO schema_migrations(version, description)
+                VALUES (?, ?)
+                """,
+                (11, "per-context-window token budget tracking"),
             )
             self.conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
 

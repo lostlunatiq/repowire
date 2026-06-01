@@ -8,6 +8,7 @@ from repowire.daemon.state.queued_deliveries import (
     SQLiteQueuedDeliveryStore,
 )
 from repowire.daemon.state.session_bindings import SessionBinding, SQLiteSessionBindingStore
+from repowire.daemon.state.token_budgets import SQLiteTokenBudgetStore
 from repowire.daemon.state.work import SQLiteWorkStore
 
 __all__ = [
@@ -20,5 +21,6 @@ __all__ = [
     "SQLiteWorkStore",
     "SessionBinding",
     "SQLiteSessionBindingStore",
+    "SQLiteTokenBudgetStore",
     "StateDatabase",
 ]

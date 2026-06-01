@@ -68,6 +68,7 @@ from repowire.daemon.state.session_bindings import (
     SQLiteSessionBindingStore,
     resolve_repowire_session_id,
 )
+from repowire.daemon.state.token_budgets import SQLiteTokenBudgetStore
 from repowire.daemon.state.work import SQLiteWorkStore
 from repowire.daemon.websocket_transport import WebSocketTransport
 
@@ -269,6 +270,7 @@ def create_app(
         calendar_store = SQLiteCalendarStore(state_db, work_store)
         operation_store = SQLiteOperationStore(state_db)
         delivery_trace_store = DeliveryTraceStore(state_db)
+        token_budget_store = SQLiteTokenBudgetStore(state_db)
         # Store in app state for route handlers
         app.state.config = cfg
         app.state.transport = transport
@@ -291,6 +293,7 @@ def create_app(
         app.state.session_binding_store = session_binding_store
         app.state.queued_delivery_store = queued_delivery_store
         app.state.delivery_trace_store = delivery_trace_store
+        app.state.token_budget_store = token_budget_store
         from repowire.acp import AcpClientManager, ApprovalBroker
         acp_permission_broker = ApprovalBroker(
             emit_event=peer_registry.add_event,
@@ -622,6 +625,7 @@ def create_test_app(
         calendar_store = SQLiteCalendarStore(state_db, work_store)
         operation_store = SQLiteOperationStore(state_db)
         delivery_trace_store = DeliveryTraceStore(state_db)
+        token_budget_store = SQLiteTokenBudgetStore(state_db)
         app.state.config = cfg
         app.state.transport = transport
         app.state.query_tracker = query_tracker
@@ -642,6 +646,7 @@ def create_test_app(
         app.state.session_binding_store = session_binding_store
         app.state.queued_delivery_store = queued_delivery_store
         app.state.delivery_trace_store = delivery_trace_store
+        app.state.token_budget_store = token_budget_store
         from repowire.acp import AcpClientManager, ApprovalBroker
         acp_permission_broker = ApprovalBroker(
             emit_event=registry.add_event,
