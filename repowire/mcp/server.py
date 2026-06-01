@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
+import subprocess
 from pathlib import Path
 from urllib.parse import quote
 from uuid import uuid4
@@ -1717,6 +1719,241 @@ def create_mcp_server(*, streamable_http_path: str = "/mcp") -> FastMCP:
         _ensure_http_admin_tool_allowed("schedule_delete")
         await daemon_request("DELETE", f"/schedules/{quote(schedule_id, safe='')}")
         return f"deleted schedule {schedule_id}"
+
+    @mcp.tool()
+    async def lint_code(files: list[str], linter: str = "ruff") -> dict:
+        """[Repowire mesh] Run a linter on the given files.
+
+        Args:
+            files: List of file paths to lint.
+            linter: Linter to use. Supported: ruff, flake8, pylint, eslint, prettier.
+
+        Returns:
+            Structured lint result with passed, violations, stdout, stderr, exit_code.
+        """
+        await _ensure_registered()
+        binary = shutil.which(linter)
+        if not binary:
+            return {"passed": False, "error": f"{linter} not found in PATH"}
+
+        cmd: list[str]
+        if linter == "ruff":
+            cmd = [binary, "check", "--output-format", "json"] + files
+        else:
+            cmd = [binary] + files
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=Path.cwd(),
+            )
+        except subprocess.TimeoutExpired:
+            return {"passed": False, "error": "Lint timed out after 60s"}
+        except FileNotFoundError:
+            return {"passed": False, "error": f"{linter} not found"}
+
+        violations: list[dict] = []
+        if linter == "ruff" and result.stdout:
+            try:
+                violations = json.loads(result.stdout)
+                if not isinstance(violations, list):
+                    violations = []
+            except json.JSONDecodeError:
+                pass
+
+        return {
+            "passed": result.returncode == 0,
+            "violations": violations,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "exit_code": result.returncode,
+        }
+
+    @mcp.tool()
+    async def run_tests(test_path: str, runner: str = "pytest") -> dict:
+        """[Repowire mesh] Run tests and return structured results.
+
+        Args:
+            test_path: Path to test file or directory.
+            runner: Test runner. Supported: pytest, unittest, jest, vitest, cargo test.
+
+        Returns:
+            Structured test result with passed, failed list, stdout, stderr, exit_code.
+        """
+        await _ensure_registered()
+        binary = shutil.which(runner)
+        if not binary:
+            return {"passed": False, "error": f"{runner} not found in PATH"}
+
+        cmd: list[str]
+        if runner == "pytest":
+            cmd = [binary, test_path, "-v", "--tb=short"]
+        elif runner == "unittest":
+            cmd = [binary, "-m", "unittest", "discover", "-s", test_path]
+        else:
+            cmd = [binary, test_path]
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=Path.cwd(),
+            )
+        except subprocess.TimeoutExpired:
+            return {"passed": False, "error": "Tests timed out after 120s"}
+        except FileNotFoundError:
+            return {"passed": False, "error": f"{runner} not found"}
+
+        failed: list[dict] = []
+        if runner == "pytest" and result.returncode != 0 and result.stdout:
+            for line in result.stdout.splitlines():
+                if "FAILED" in line:
+                    parts = line.split("FAILED", 1)
+                    failed.append({
+                        "test": parts[0].strip() if parts else line.strip(),
+                        "message": parts[1].strip() if len(parts) > 1 else "",
+                    })
+
+        return {
+            "passed": result.returncode == 0,
+            "failed": failed,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "exit_code": result.returncode,
+        }
+
+    @mcp.tool()
+    async def type_check(files: list[str], checker: str = "mypy") -> dict:
+        """[Repowire mesh] Run a type checker on the given files.
+
+        Args:
+            files: List of file paths to type-check.
+            checker: Type checker. Supported: mypy, pyright, tsc, rustc.
+
+        Returns:
+            Structured type-check result with passed, errors, stdout, stderr, exit_code.
+        """
+        await _ensure_registered()
+        binary = shutil.which(checker)
+        if not binary:
+            return {"passed": False, "error": f"{checker} not found in PATH"}
+
+        cmd: list[str]
+        if checker == "mypy":
+            cmd = [binary, "--show-error-codes"] + files
+        else:
+            cmd = [binary] + files
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=Path.cwd(),
+            )
+        except subprocess.TimeoutExpired:
+            return {"passed": False, "error": "Type check timed out after 120s"}
+        except FileNotFoundError:
+            return {"passed": False, "error": f"{checker} not found"}
+
+        errors: list[dict] = []
+        if result.returncode != 0 and result.stdout:
+            for line in result.stdout.splitlines():
+                if ":" in line and not line.startswith("Success"):
+                    errors.append({"message": line.strip()})
+
+        return {
+            "passed": result.returncode == 0,
+            "errors": errors,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "exit_code": result.returncode,
+        }
+
+    @mcp.tool()
+    async def static_analyze(files: list[str], analyzer: str = "bandit") -> dict:
+        """[Repowire mesh] Run a security/static analyzer on the given files.
+
+        Args:
+            files: List of file paths to analyze.
+            analyzer: Analyzer. Supported: bandit, semgrep, safety.
+
+        Returns:
+            Structured analysis result with passed, issues, stdout, stderr, exit_code.
+        """
+        await _ensure_registered()
+        binary = shutil.which(analyzer)
+        if not binary:
+            return {"passed": False, "error": f"{analyzer} not found in PATH"}
+
+        cmd: list[str]
+        if analyzer == "bandit":
+            cmd = [binary, "-f", "json", "-r"] + files
+        else:
+            cmd = [binary] + files
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=Path.cwd(),
+            )
+        except subprocess.TimeoutExpired:
+            return {"passed": False, "error": "Analysis timed out after 120s"}
+        except FileNotFoundError:
+            return {"passed": False, "error": f"{analyzer} not found"}
+
+        issues: list[dict] = []
+        if analyzer == "bandit" and result.stdout:
+            try:
+                data = json.loads(result.stdout)
+                issues = data.get("results", [])
+                if not isinstance(issues, list):
+                    issues = []
+            except json.JSONDecodeError:
+                pass
+
+        return {
+            "passed": result.returncode == 0,
+            "issues": issues,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "exit_code": result.returncode,
+        }
+
+    @mcp.tool()
+    async def get_budget_status(peer_id: str | None = None) -> dict:
+        """[Repowire mesh] Query token budget status for self or a subagent.
+
+        Args:
+            peer_id: Peer ID to query. Defaults to caller's own peer_id.
+
+        Returns:
+            Budget status dict with used, remaining, ceiling, warning_sent.
+        """
+        await _ensure_registered()
+        my_peer = await _get_my_peer_identifier()
+        target = peer_id or my_peer
+
+        resp = await daemon_request("GET", f"/peers/{target}/budget")
+        if resp is None:
+            return {"error": "Failed to query budget status"}
+
+        return {
+            "budget_id": resp.get("budget_id", target),
+            "used": resp.get("used", 0),
+            "remaining": resp.get("remaining", 100000),
+            "ceiling": resp.get("ceiling", 100000),
+            "warning_sent": resp.get("warning_sent", False),
+        }
 
     return mcp
 
