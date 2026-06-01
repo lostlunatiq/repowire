@@ -312,7 +312,8 @@ def _kimi_resumable(peer_path: str | None, runtime_session_id: str) -> bool:
 
     Kimi stores sessions in ~/.kimi-code/session_index.jsonl (JSONL format),
     where each line maps sessionId -> sessionDir -> workDir. We check that
-    the sessionId exists and its sessionDir is present on disk.
+    the sessionId exists, its workDir matches the peer path, and its
+    sessionDir is present on disk.
     """
     index_path = Path.home() / ".kimi-code" / "session_index.jsonl"
     if not index_path.is_file():
@@ -330,8 +331,13 @@ def _kimi_resumable(peer_path: str | None, runtime_session_id: str) -> bool:
                     continue
                 if entry.get("sessionId") != runtime_session_id:
                     continue
-                session_dir = Path(entry.get("sessionDir", ""))
-                if session_dir.is_dir():
+                if peer_path is not None and not _path_matches(
+                    entry.get("workDir"), peer_path
+                ):
+                    continue
+                session_dir_str = entry.get("sessionDir") or ""
+                session_dir = Path(session_dir_str)
+                if _safe_is_file(session_dir / "state.json"):
                     return True
     except OSError:
         return False
