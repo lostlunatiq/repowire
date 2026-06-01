@@ -367,6 +367,64 @@ class GeminiBackend(AgentBackend):
         peer_mcp._gemini_remove(name)
 
 
+class KimiCodeBackend(AgentBackend):
+    agent_type = AgentType.KIMI_CODE
+    display_name = "Kimi Code"
+    cli_names = ("kimi",)
+    config_markers = (Path.home() / ".kimi-code",)
+    default_command = "kimi -C --yolo --auto"
+    supports_resume = True
+    resume_strategy = "kimi_resume"
+    resume_flag = "-S"
+    post_spawn_strategy = "seed_message"
+    mcp_config_scope = McpConfigScope(
+        owner="backend",
+        effective_scope="backend_global",
+        label="Kimi Code global backend config",
+        description=(
+            "Kimi Code MCP edits target the user-level Kimi Code config shared by "
+            "Kimi Code sessions on this host."
+        ),
+    )
+
+    @classmethod
+    def mcp_runtime_matches(cls, env: Mapping[str, str]) -> bool:
+        if super().mcp_runtime_matches(env):
+            return True
+        return False
+
+    def install(self, options: BackendInstallOptions | None = None) -> list[BackendInstallMessage]:
+        from repowire.installers.kimi_code import install_hooks, install_mcp
+
+        messages: list[BackendInstallMessage] = []
+        try:
+            install_hooks()
+            messages.append(BackendInstallMessage("success", "Kimi Code hooks installed"))
+        except Exception as e:
+            messages.append(BackendInstallMessage("error", f"Failed to install Kimi Code hooks: {e}"))
+        try:
+            install_mcp()
+            messages.append(BackendInstallMessage("success", "Kimi Code MCP server configured"))
+        except Exception as e:
+            messages.append(BackendInstallMessage("error", f"Failed to configure Kimi Code MCP: {e}"))
+        return messages
+
+    def list_mcp_servers(self, peer):
+        from repowire import peer_mcp
+
+        return peer_mcp._kimi_list()
+
+    def add_mcp_server(self, peer, spec) -> None:
+        from repowire import peer_mcp
+
+        peer_mcp._kimi_add(spec)
+
+    def remove_mcp_server(self, peer, name: str) -> None:
+        from repowire import peer_mcp
+
+        peer_mcp._kimi_remove(name)
+
+
 class OpenCodeBackend(AgentBackend):
     agent_type = AgentType.OPENCODE
     display_name = "OpenCode"
@@ -447,6 +505,7 @@ AGENT_BACKENDS: dict[AgentType, AgentBackend] = {
     AgentType.OPENCODE: OpenCodeBackend(),
     AgentType.CODEX: CodexBackend(),
     AgentType.GEMINI: GeminiBackend(),
+    AgentType.KIMI_CODE: KimiCodeBackend(),
     AgentType.ANTIGRAVITY: AntigravityBackend(),
     AgentType.PI: PiBackend(),
     AgentType.MCP_HTTP: McpHttpBackend(),
@@ -513,6 +572,7 @@ def detect_mcp_backend(
     for backend_type in (
         AgentType.CLAUDE_CODE,
         AgentType.GEMINI,
+        AgentType.KIMI_CODE,
         AgentType.CODEX,
         AgentType.OPENCODE,
         AgentType.ANTIGRAVITY,
