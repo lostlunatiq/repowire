@@ -7,7 +7,7 @@ from repowire.agent_backends import (
     build_resume_command,
     detect_mcp_backend,
 )
-from repowire.agent_types import AgentType
+from repowire.config.models import AgentType
 
 
 def test_kimi_code_backend_registered() -> None:
@@ -27,15 +27,16 @@ def test_detect_mcp_backend_explicit_env() -> None:
     assert detect_mcp_backend(env) == AgentType.KIMI_CODE
 
 
-def test_detect_mcp_backend_kimi_marker() -> None:
-    """Kimi is detected when ~/.kimi-code exists and kimi binary is in PATH."""
-    with patch.dict(os.environ, {"PATH": "/Users/test/.kimi-code/bin:/usr/bin"}, clear=True):
-        with patch("shutil.which", return_value="/Users/test/.kimi-code/bin/kimi"):
-            with patch.object(
-                KimiCodeBackend, "mcp_runtime_matches", return_value=True
-            ):
-                result = detect_mcp_backend(os.environ)
-                assert result == AgentType.KIMI_CODE
+def test_kimi_mcp_runtime_matches_explicit() -> None:
+    """Explicit REPOWIRE_BACKEND=kimi-code is authoritative."""
+    env = {"REPOWIRE_BACKEND": "kimi-code"}
+    assert KimiCodeBackend.mcp_runtime_matches(env) is True
+
+
+def test_kimi_mcp_runtime_matches_no_marker() -> None:
+    """Without explicit env or Kimi-specific marker, should not match."""
+    env = {"PATH": "/usr/bin", "HOME": "/tmp"}
+    assert KimiCodeBackend.mcp_runtime_matches(env) is False
 
 
 def test_build_resume_command_kimi() -> None:
