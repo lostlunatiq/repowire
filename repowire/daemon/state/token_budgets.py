@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from repowire.daemon.state.database import StateDatabase
-from repowire.daemon.work_store import json_dumps, json_loads, now_iso
+from repowire.daemon.work_store import now_iso
 
 
 @dataclass(frozen=True)
@@ -56,7 +55,9 @@ class SQLiteTokenBudgetStore:
         ).fetchone()
         return self._row_to_budget(row)
 
-    def get_or_create(self, budget_id: str, *, agent_type: str, parent_peer_id: str | None = None) -> TokenBudget:
+    def get_or_create(
+        self, budget_id: str, *, agent_type: str, parent_peer_id: str | None = None
+    ) -> TokenBudget:
         existing = self.get(budget_id)
         if existing is not None:
             return existing
@@ -72,7 +73,9 @@ class SQLiteTokenBudgetStore:
                 """,
                 (budget_id, parent_peer_id, agent_type, 0, 0, 100000, 0, now),
             )
-        return self.get(budget_id)
+        budget = self.get(budget_id)
+        assert budget is not None
+        return budget
 
     def record_usage(
         self,
@@ -144,7 +147,9 @@ class SQLiteTokenBudgetStore:
     ) -> TokenBudget | None:
         budget_id = f"{parent_peer_id}/{subagent_id}"
         if event == "created":
-            return self.get_or_create(budget_id, agent_type=agent_type, parent_peer_id=parent_peer_id)
+            return self.get_or_create(
+                budget_id, agent_type=agent_type, parent_peer_id=parent_peer_id
+            )
         if event == "destroyed":
             with self._conn:
                 self._conn.execute(
@@ -154,5 +159,7 @@ class SQLiteTokenBudgetStore:
             return None
         if event == "usage_update":
             self.get_or_create(budget_id, agent_type=agent_type, parent_peer_id=parent_peer_id)
-            return self.record_usage(budget_id, input_tokens=input_tokens, output_tokens=output_tokens)
+            return self.record_usage(
+                budget_id, input_tokens=input_tokens, output_tokens=output_tokens
+            )
         return self.get(budget_id)

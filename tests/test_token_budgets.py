@@ -1,4 +1,3 @@
-import pytest
 
 from repowire.daemon.state.database import StateDatabase
 from repowire.daemon.state.token_budgets import SQLiteTokenBudgetStore
@@ -39,6 +38,7 @@ def test_token_budget_store_record_usage(tmp_path):
         assert updated.cumulative_output_tokens == 25
 
         updated2 = store.record_usage("budget-1", input_tokens=10, output_tokens=5)
+        assert updated2 is not None
         assert updated2.cumulative_input_tokens == 60
         assert updated2.cumulative_output_tokens == 30
 

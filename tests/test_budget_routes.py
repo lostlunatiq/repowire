@@ -1,5 +1,4 @@
 import pytest
-from httpx import AsyncClient
 
 from repowire.daemon.deps import cleanup_deps
 from repowire.daemon.routes import budget, peers
