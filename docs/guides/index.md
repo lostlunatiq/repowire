@@ -10,6 +10,7 @@ Task-focused recipes for setting up and operating Repowire.
 - [Connect Antigravity CLI](connect-antigravity.md)
 - [Connect OpenCode](connect-opencode.md)
 - [Connect Kimi Code](connect-kimi.md)
+- [Connect Abacus AI CLI](connect-abacusai.md)
 
 ## Use control surfaces
 
