@@ -570,3 +570,78 @@ def _kimi_remove(name: str) -> None:
         raise ServerNotFoundError(f"server {name!r} not configured")
     del servers[name]
     _kimi_save(data)
+
+
+# ---------------------------------------------------------------------------
+# abacusai: edit ~/.abacusai/repowire-mcp.json mcpServers block
+# ---------------------------------------------------------------------------
+
+ABACUSAI_MCP_PATH = Path.home() / ".abacusai" / "repowire-mcp.json"
+
+
+def _abacusai_load() -> dict[str, Any]:
+    if not ABACUSAI_MCP_PATH.exists():
+        return {"mcpServers": {}}
+    try:
+        return json.loads(ABACUSAI_MCP_PATH.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        raise BackendError(f"failed to read abacusai mcp config: {e}") from e
+
+
+def _abacusai_save(data: dict[str, Any]) -> None:
+    _atomic_write_text(ABACUSAI_MCP_PATH, json.dumps(data, indent=2))
+
+
+def _abacusai_list() -> list[McpServerEntry]:
+    data = _abacusai_load()
+    servers = data.get("mcpServers", {})
+    if not isinstance(servers, dict):
+        return []
+    out: list[McpServerEntry] = []
+    for name, body in servers.items():
+        if not isinstance(body, dict):
+            continue
+        env = body.get("env", {})
+        env_keys: list[str] = [str(k) for k in env.keys()] if isinstance(env, dict) else []
+        url = body.get("url")
+        srv_type = "http" if url else "stdio"
+        out.append(
+            McpServerEntry(
+                name=name,
+                scope="user",
+                type=srv_type,
+                command=body.get("command") if isinstance(body.get("command"), str) else None,
+                args=list(body.get("args", []) or []),
+                url=url if isinstance(url, str) else None,
+                env_keys=env_keys,
+            )
+        )
+    return out
+
+
+def _abacusai_add(spec: McpServerSpec) -> None:
+    data = _abacusai_load()
+    servers = data.get("mcpServers", {})
+    if not isinstance(servers, dict):
+        raise BackendError("abacusai mcpServers must be an object")
+    data["mcpServers"] = servers
+    entry: dict[str, Any] = {}
+    if spec.command:
+        entry["command"] = spec.command
+    if spec.args:
+        entry["args"] = list(spec.args)
+    if spec.url:
+        entry["url"] = spec.url
+    if spec.env:
+        entry["env"] = dict(spec.env)
+    servers[spec.name] = entry
+    _abacusai_save(data)
+
+
+def _abacusai_remove(name: str) -> None:
+    data = _abacusai_load()
+    servers = data.get("mcpServers", {})
+    if not isinstance(servers, dict) or name not in servers:
+        raise ServerNotFoundError(f"server {name!r} not configured")
+    del servers[name]
+    _abacusai_save(data)
