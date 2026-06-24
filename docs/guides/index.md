@@ -9,6 +9,7 @@ Task-focused recipes for setting up and operating Repowire.
 - [Connect Gemini CLI](connect-gemini.md)
 - [Connect Antigravity CLI](connect-antigravity.md)
 - [Connect OpenCode](connect-opencode.md)
+- [Connect Kimi Code](connect-kimi.md)
 
 ## Use control surfaces
 
