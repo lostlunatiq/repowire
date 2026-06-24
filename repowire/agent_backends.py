@@ -437,6 +437,73 @@ class KimiCodeBackend(AgentBackend):
         peer_mcp._kimi_remove(name)
 
 
+class AbacusAIBackend(AgentBackend):
+    agent_type = AgentType.ABACUSAI
+    display_name = "Abacus AI"
+    cli_names = ("abacusai",)
+    config_markers = (Path.home() / ".abacusai",)
+    default_command = (
+        "abacusai --permission-mode yolo --auto-accept-edits "
+        "--mcp-config ~/.abacusai/repowire-mcp.json"
+    )
+    supports_resume = True
+    resume_strategy = "abacusai_conversation"
+    resume_flag = "--resume"
+    post_spawn_strategy = "seed_message"
+    mcp_config_scope = McpConfigScope(
+        owner="backend",
+        effective_scope="backend_global",
+        label="Abacus AI global backend config",
+        description=(
+            "Abacus AI MCP edits target a dedicated user-level config file "
+            "loaded via --mcp-config."
+        ),
+    )
+
+    @classmethod
+    def mcp_runtime_matches(cls, env: Mapping[str, str]) -> bool:
+        if super().mcp_runtime_matches(env):
+            return True
+        return bool(env.get("ABACUSAI_SESSION_ID"))
+
+    def install(self, options: BackendInstallOptions | None = None) -> list[BackendInstallMessage]:
+        from repowire.installers.abacusai import install_mcp
+
+        messages: list[BackendInstallMessage] = []
+        try:
+            install_mcp()
+            messages.append(
+                BackendInstallMessage("success", "Abacus AI MCP server configured")
+            )
+        except Exception as e:
+            messages.append(
+                BackendInstallMessage("error", f"Failed to configure Abacus AI MCP: {e}")
+            )
+        messages.append(
+            BackendInstallMessage(
+                "info",
+                "abacusai does not expose lifecycle hooks; mesh registration "
+                "happens lazily when the agent calls a Repowire MCP tool.",
+            )
+        )
+        return messages
+
+    def list_mcp_servers(self, peer):
+        from repowire import peer_mcp
+
+        return peer_mcp._abacusai_list()
+
+    def add_mcp_server(self, peer, spec) -> None:
+        from repowire import peer_mcp
+
+        peer_mcp._abacusai_add(spec)
+
+    def remove_mcp_server(self, peer, name: str) -> None:
+        from repowire import peer_mcp
+
+        peer_mcp._abacusai_remove(name)
+
+
 class OpenCodeBackend(AgentBackend):
     agent_type = AgentType.OPENCODE
     display_name = "OpenCode"
@@ -518,6 +585,7 @@ AGENT_BACKENDS: dict[AgentType, AgentBackend] = {
     AgentType.CODEX: CodexBackend(),
     AgentType.GEMINI: GeminiBackend(),
     AgentType.KIMI_CODE: KimiCodeBackend(),
+    AgentType.ABACUSAI: AbacusAIBackend(),
     AgentType.ANTIGRAVITY: AntigravityBackend(),
     AgentType.PI: PiBackend(),
     AgentType.MCP_HTTP: McpHttpBackend(),
@@ -585,6 +653,7 @@ def detect_mcp_backend(
         AgentType.CLAUDE_CODE,
         AgentType.GEMINI,
         AgentType.KIMI_CODE,
+        AgentType.ABACUSAI,
         AgentType.CODEX,
         AgentType.OPENCODE,
         AgentType.ANTIGRAVITY,
