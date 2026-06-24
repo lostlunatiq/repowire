@@ -16,3 +16,4 @@ class AgentType(str, Enum):
     PI = "pi"
     MCP_HTTP = "mcp-http"
     KIMI_CODE = "kimi-code"
+    ABACUSAI = "abacusai"
