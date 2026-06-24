@@ -16,7 +16,7 @@ from repowire.hooks.utils import get_display_name, update_status
 def _budget_check_blocking(backend: str) -> str | None:
     """Best-effort budget check. Returns block reason if budget exhausted.
 
-    Backends that support hook-level block decisions (gemini, kimi)
+    Backends that support hook-level block decisions (gemini, kimi-code)
     get a native block. Others log a warning and rely on daemon-level
     enforcement (ask routing, job runner).
     """
@@ -32,7 +32,7 @@ def _budget_check_blocking(backend: str) -> str | None:
                 f"Token budget exhausted: {used}/{ceiling}. "
                 f"Kill this peer or spawn a fresh one to reset."
             )
-            if backend in ("gemini", "kimi", "antigravity"):
+            if backend in ("gemini", "kimi-code", "antigravity"):
                 print(json.dumps({"decision": "deny", "reason": reason}))
                 return reason
             print(

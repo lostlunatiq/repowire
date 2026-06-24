@@ -62,8 +62,9 @@ def hook_output(backend: str) -> None:
     explicit allow. Whether the Antigravity CLI actually fires plugin-defined
     hooks today is pending upstream verification.
 
-    Kimi Code uses a plugin system (superpowers) that follows the same
-    BeforeAgent/AfterAgent pattern, so it also needs explicit allow.
+    Kimi Code uses hooks that follow the same BeforeAgent/AfterAgent
+    pattern, so it also needs explicit allow. The backend string passed
+    here is the AgentType value, which is "kimi-code".
     """
-    if backend in ("gemini", "antigravity", "kimi"):
+    if backend in ("gemini", "antigravity", "kimi-code"):
         print(json.dumps({"decision": "allow"}))
