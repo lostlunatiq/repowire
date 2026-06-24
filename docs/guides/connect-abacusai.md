@@ -22,6 +22,20 @@ The default spawn command automatically loads it:
 abacusai --permission-mode yolo --auto-accept-edits --mcp-config ~/.abacusai/repowire-mcp.json
 ```
 
+## Start a session
+
+### Option 1: spawn from Repowire
+
+```bash
+repowire peer new . --backend abacusai
+```
+
+### Option 2: start manually in an existing tmux pane
+
+```bash
+abacusai --permission-mode yolo --auto-accept-edits --mcp-config ~/.abacusai/repowire-mcp.json
+```
+
 ## Verify
 
 Start a session and ask the agent to run:
