@@ -280,7 +280,7 @@ def setup(
 
     if not agents_setup:
         console.print("[yellow]No agent types detected.[/]")
-        console.print("Install claude, codex, gemini, agy, opencode, or pi first.")
+        console.print("Install claude, codex, gemini, abacusai, agy, opencode, or pi first.")
         if not (http_mcp or relay or update_checks is not None or interactive):
             return
     else:
@@ -506,6 +506,7 @@ def uninstall(yes: bool) -> None:
     _uninstall_opencode()
     _uninstall_codex()
     _uninstall_gemini()
+    _uninstall_abacusai()
     _uninstall_antigravity()
     _uninstall_pi()
 
@@ -609,6 +610,19 @@ def _uninstall_gemini() -> None:
             console.print("[green]✓[/] Gemini MCP config removed")
     except Exception:
         pass
+
+
+def _uninstall_abacusai() -> None:
+    """Uninstall Abacus AI components."""
+    from repowire.installers.abacusai import uninstall_mcp
+
+    try:
+        if uninstall_mcp():
+            console.print("[green]✓[/] Abacus AI MCP config removed")
+        else:
+            console.print("[dim]Abacus AI MCP config not installed[/]")
+    except Exception as e:
+        console.print(f"[yellow]![/] Failed to remove Abacus AI MCP config: {e}")
 
 
 def _uninstall_antigravity() -> None:
