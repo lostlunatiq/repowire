@@ -2091,7 +2091,9 @@ def agents() -> None:
 @click.option("--path", "path_raw", help="Scaffold path (default: .repowire/agents/NAME)")
 @click.option(
     "--backend",
-    type=click.Choice(["claude-code", "codex", "gemini", "antigravity", "opencode", "pi"]),
+    type=click.Choice(
+        ["claude-code", "codex", "gemini", "abacusai", "antigravity", "opencode", "pi"]
+    ),
     help="Backend to include in the suggested jobs command",
 )
 @click.option("--force", is_flag=True, help="Back up and recreate an existing scaffold")
@@ -3032,7 +3034,9 @@ def _render_peer_snapshot(snapshot: object) -> None:
     "--backend",
     "-b",
     default="claude-code",
-    type=click.Choice(["claude-code", "opencode", "codex", "gemini", "antigravity", "pi"]),
+    type=click.Choice(
+        ["claude-code", "opencode", "codex", "gemini", "abacusai", "antigravity", "pi"]
+    ),
 )
 @click.option("--command", "-c", "cmd", help="Deprecated: explicit command override")
 @click.option("--profile", help="Named spawn profile to apply to the backend command")
@@ -3592,7 +3596,9 @@ def _resolve_peer_id_for_asks(
 @click.option("--name", help="Display name (defaults to current folder name)")
 @click.option(
     "--backend",
-    type=click.Choice(["claude-code", "codex", "gemini", "antigravity", "opencode", "pi"]),
+    type=click.Choice(
+        ["claude-code", "codex", "gemini", "abacusai", "antigravity", "opencode", "pi"]
+    ),
     help="Agent backend type (required with --register)",
 )
 @click.option("--circle", "-c", default=None, help="Circle (default: 'default')")
