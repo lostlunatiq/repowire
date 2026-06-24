@@ -1,4 +1,6 @@
 
+from unittest.mock import patch
+
 from repowire.agent_backends import (
     AGENT_BACKENDS,
     KimiCodeBackend,
@@ -17,6 +19,18 @@ def test_kimi_code_backend_registered() -> None:
     assert backend.supports_resume is True
     assert backend.resume_flag == "-S"
     assert backend.default_command == "kimi -C --yolo --auto"
+    assert backend.mcp_config_scope is not None
+
+
+def test_kimi_backend_install_calls_installer() -> None:
+    backend = KimiCodeBackend()
+    with patch("repowire.installers.kimi_code.install_hooks") as mock_hooks:
+        with patch("repowire.installers.kimi_code.install_mcp") as mock_mcp:
+            messages = backend.install()
+    mock_hooks.assert_called_once()
+    mock_mcp.assert_called_once()
+    assert any("hooks installed" in m.text for m in messages)
+    assert any("MCP server configured" in m.text for m in messages)
 
 
 def test_detect_mcp_backend_explicit_env() -> None:
